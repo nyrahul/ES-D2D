@@ -82,6 +82,15 @@ int receiver(int fd)
     socklen_t slen = sizeof(lladdr);
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
+    int ret;
+
+    memset(&lladdr, 0, sizeof(lladdr));
+    lladdr.sll_family = AF_PACKET;
+    lladdr.sll_ifindex = g_ifindex;
+    lladdr.sll_protocol = htons(g_l2_proto);
+
+    ret = bind(fd, (struct sockaddr*)&lladdr, sizeof(lladdr));
+    ASSERT(ret != -1, "bind failed %m");
 
     while(1)
     {
