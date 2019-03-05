@@ -44,7 +44,7 @@ int create_sock(const char *if_name)
 {
     int fd;
 
-    fd = socket(AF_PACKET, SOCK_RAW, htons(g_l2_proto));
+    fd = socket(AF_PACKET, SOCK_DGRAM, htons(g_l2_proto));
     ASSERT(fd >= 0, "socket failed %m");
 
     g_ifindex = get_ifindex(fd, if_name);
@@ -69,7 +69,7 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     lladdr.sll_family = AF_PACKET;
     lladdr.sll_ifindex = g_ifindex;
     lladdr.sll_halen = maclen;
-    lladdr.sll_protocol = htons(g_l2_proto);
+    lladdr.sll_protocol = htons(D2D_PROTO);
     memcpy(lladdr.sll_addr, mac, maclen);
 
     send_packet(fd, &lladdr, buf, mtu);
@@ -87,7 +87,7 @@ int receiver(int fd)
     memset(&lladdr, 0, sizeof(lladdr));
     lladdr.sll_family = AF_PACKET;
     lladdr.sll_ifindex = g_ifindex;
-    lladdr.sll_protocol = htons(g_l2_proto);
+    lladdr.sll_protocol = htons(D2D_PROTO);
 
     ret = bind(fd, (struct sockaddr*)&lladdr, sizeof(lladdr));
     ASSERT(ret != -1, "bind failed %m");
