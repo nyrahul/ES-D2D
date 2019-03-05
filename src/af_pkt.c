@@ -136,7 +136,6 @@ int receiver(int fd)
     {
         tot_bytes = 0;
         last_seq = -1;
-        gettimeofday(&start_tv, NULL);
         while(1)
         {
             n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
@@ -145,7 +144,11 @@ int receiver(int fd)
                 usleep(1000);
                 break;
             }
-            if(!tot_bytes) set_timeout(fd, 200);
+            if(!tot_bytes)
+            {
+                gettimeofday(&start_tv, NULL);
+                set_timeout(fd, 200);
+            }
             hdr = (d2d_hdr_t *)buf;
             if(last_seq != -1 && (last_seq + 1 != hdr->seq))
             {
