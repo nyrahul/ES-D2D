@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "common.h"
 #include "af_pkt.h"
 
@@ -52,19 +53,26 @@ int create_sock(const char *if_name)
     return fd;
 }
 
-int send_packet(int fd, struct sockaddr_ll *lladdr, const uint8_t *buf, size_t buflen)
+typedef struct _d2d_hdr_
 {
-    int ret;
+    int seq;
+}d2d_hdr_t;
 
-    ret = sendto(fd, buf, buflen, 0, (struct sockaddr*)lladdr, sizeof(*lladdr));
-    INFO("sendto ret=%d %m fd=%d\n", ret, fd);
-    return ret;
+int g_seq = 0;
+int fill_buf(uint8_t *buf, int mtu)
+{
+    d2d_hdr_t hdr = { 0 };
+
+    hdr.seq = g_seq++;
+    memcpy(buf, &hdr, sizeof(hdr));
+    return mtu;
 }
 
 int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
 {
     struct sockaddr_ll lladdr = {0};
     uint8_t buf[MAX_MAC_MTU] = { 1 };
+    int len, ret, i;
 
     lladdr.sll_family = AF_PACKET;
     lladdr.sll_ifindex = g_ifindex;
@@ -72,7 +80,12 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     lladdr.sll_protocol = htons(D2D_PROTO);
     memcpy(lladdr.sll_addr, mac, maclen);
 
-    send_packet(fd, &lladdr, buf, mtu);
+    for(i=0;i<1000;i++)
+    {
+        len = fill_buf(buf, mtu);
+        ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
+        usleep(0);
+    }
     return SUCCESS;
 }
 
