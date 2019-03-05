@@ -83,7 +83,10 @@ int receiver(int fd)
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
 
-    n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
-    INFO("recvfrom n=%ld\n", n);
-    return n;
+    while(1)
+    {
+        n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
+        INFO("recvfrom n=%ld\n", n);
+    }
+    return SUCCESS;
 }
