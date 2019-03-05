@@ -95,7 +95,8 @@ int receiver(int fd)
     socklen_t slen = sizeof(lladdr);
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
-    int ret;
+    int ret, last_seq = -1;
+    d2d_hdr_t *hdr;
 
     memset(&lladdr, 0, sizeof(lladdr));
     lladdr.sll_family = AF_PACKET;
@@ -108,7 +109,18 @@ int receiver(int fd)
     while(1)
     {
         n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
-        INFO("recvfrom n=%ld\n", n);
+        if(n <= 0)
+        {
+            ERROR("recvfrom n=%ld %m\n", n);
+            usleep(1000);
+            continue;
+        }
+        hdr = (d2d_hdr_t *)buf;
+        if(last_seq != -1 && (last_seq + 1 != hdr->seq))
+        {
+            INFO("got out of seq, exp=%d got=%d\n", last_seq+1, hdr->seq);
+        }
+        last_seq = hdr->seq;
     }
     return SUCCESS;
 }
