@@ -89,7 +89,7 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     return SUCCESS;
 }
 
-int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd)
+int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd, int num_pkts)
 {
     int ms;
     double MBps;
@@ -98,6 +98,8 @@ int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd)
     MBps = (double)(bytes_rcvd/(1024*1024))/(double)(ms/1000);
     INFO("Statistics:\n");
     INFO("Bytes rcvd=%zu\n", bytes_rcvd);
+    INFO("pkts rcvd=%d\n", num_pkts);
+    INFO("Avg pkt sz=%.2f\n", (float)(bytes_rcvd/num_pkts));
     INFO("time in ms=%d\n", ms);
     INFO("Thruput=%.2f MBps\n", MBps);
 }
@@ -119,6 +121,7 @@ int receiver(int fd)
     socklen_t slen = sizeof(lladdr);
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
+    int num_pkts=0;
     int ret, last_seq = -1;
     size_t tot_bytes = 0;
     d2d_hdr_t *hdr;
@@ -135,7 +138,8 @@ int receiver(int fd)
     while(1)
     {
         tot_bytes = 0;
-        last_seq = -1;
+        num_pkts  = 0;
+        last_seq  = -1;
         while(1)
         {
             n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
@@ -156,10 +160,11 @@ int receiver(int fd)
             }
             last_seq = hdr->seq;
             tot_bytes += (size_t)n;
+            num_pkts++;
             gettimeofday(&end_tv, NULL);
         }
         set_timeout(fd, 0);
-        calc_rate(&start_tv, &end_tv, tot_bytes);
+        calc_rate(&start_tv, &end_tv, tot_bytes, num_pkts);
     }
     return SUCCESS;
 }
