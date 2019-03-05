@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <sys/time.h>
 #include "common.h"
 #include "af_pkt.h"
 
@@ -89,6 +90,30 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     return SUCCESS;
 }
 
+int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd)
+{
+    int ms;
+
+    ms = (((etv->tv_sec - stv->tv_sec)*1000) + ((etv->tv_usec - stv->tv_usec)/1000));
+    INFO("Statistics:\n");
+    INFO("Bytes rcvd=%zu\n", bytes_rcvd);
+    INFO("time in ms=%d\n", ms);
+    INFO("stv=%ld:%ld etv=%ld:%ld\n",
+            stv->tv_sec, stv->tv_usec,
+            etv->tv_sec, etv->tv_usec);
+}
+
+void set_timeout(int fd, int ms)
+{
+    int ret;
+    struct timeval tv;
+
+    tv.tv_sec = ms/1000;
+    tv.tv_usec = (ms%1000)*1000;
+    ret = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    ASSERT(ret != -1, "setsockopt failed %m");
+}
+
 int receiver(int fd)
 {
     struct sockaddr_ll lladdr;
@@ -96,7 +121,9 @@ int receiver(int fd)
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
     int ret, last_seq = -1;
+    size_t tot_bytes = 0;
     d2d_hdr_t *hdr;
+    struct timeval end_tv, start_tv;
 
     memset(&lladdr, 0, sizeof(lladdr));
     lladdr.sll_family = AF_PACKET;
@@ -108,19 +135,29 @@ int receiver(int fd)
 
     while(1)
     {
-        n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
-        if(n <= 0)
+        tot_bytes = 0;
+        last_seq = -1;
+        gettimeofday(&start_tv, NULL);
+        while(1)
         {
-            ERROR("recvfrom n=%ld %m\n", n);
-            usleep(1000);
-            continue;
+            n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&lladdr, &slen);
+            if(n <= 0)
+            {
+                usleep(1000);
+                break;
+            }
+            if(!tot_bytes) set_timeout(fd, 200);
+            hdr = (d2d_hdr_t *)buf;
+            if(last_seq != -1 && (last_seq + 1 != hdr->seq))
+            {
+                INFO("got out of seq, exp=%d got=%d\n", last_seq+1, hdr->seq);
+            }
+            last_seq = hdr->seq;
+            tot_bytes += (size_t)n;
+            gettimeofday(&end_tv, NULL);
         }
-        hdr = (d2d_hdr_t *)buf;
-        if(last_seq != -1 && (last_seq + 1 != hdr->seq))
-        {
-            INFO("got out of seq, exp=%d got=%d\n", last_seq+1, hdr->seq);
-        }
-        last_seq = hdr->seq;
+        set_timeout(fd, 0);
+        calc_rate(&start_tv, &end_tv, tot_bytes);
     }
     return SUCCESS;
 }
