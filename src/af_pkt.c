@@ -68,7 +68,7 @@ int fill_buf(uint8_t *buf, int mtu)
     return mtu;
 }
 
-int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
+int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
 {
     struct sockaddr_ll lladdr = {0};
     uint8_t buf[MAX_MAC_MTU] = { 1 };
@@ -80,11 +80,33 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     lladdr.sll_protocol = htons(D2D_PROTO);
     memcpy(lladdr.sll_addr, mac, maclen);
 
-    for(i=0;i<90000;i++)
+    if(fp)
     {
-        len = fill_buf(buf, mtu);
-        ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
-        if(i%1000 == 0) usleep(0);
+        int nmemb = mtu-sizeof(d2d_hdr_t);
+        INFO("sending from file mtu=%d d2d_hdr_sz=%zu, nmemb=%d...\n",
+                mtu, sizeof(d2d_hdr_t), nmemb);
+        while((len = fread(buf+sizeof(d2d_hdr_t), 1, nmemb, fp))>0)
+        {
+            len = fill_buf(buf, len+sizeof(d2d_hdr_t));
+            ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
+            if(ret <= 0)
+            {
+                ERROR("sendto failed ret=%d %m\n", ret);
+            }
+        }
+    }
+    else
+    {
+        for(i=0;i<100000;i++)
+        {
+            len = fill_buf(buf, mtu);
+            ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
+            if(ret <= 0)
+            {
+                ERROR("sendto failed ret=%d %m\n", ret);
+            }
+            if(i%1000 == 0) usleep(0);
+        }
     }
     return SUCCESS;
 }

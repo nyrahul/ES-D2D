@@ -6,10 +6,11 @@ int g_fd = -1;
 int g_tx_mode = 0;
 int g_mtu = 1500;
 uint8_t g_remaddr[MAC_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+FILE *g_fp2send = NULL;
 
 void usage(const char *cmd)
 {
-    INFO("Usage: %s -t <TX/RX> -i <*interface> -r <remote_mac_addr> -m <mtu>\n", cmd);
+    INFO("Usage: %s -t <TX/RX> -i <*interface> -r <remote_mac_addr> -m <mtu> -f <file>\n", cmd);
     exit(2);
 }
 
@@ -29,10 +30,14 @@ char *get_remaddr_str(void)
 int handle_args(int argc, char *argv[])
 {
     int opt;
-    while((opt = getopt(argc, argv, "r:i:m:t:")) != -1)
+    while((opt = getopt(argc, argv, "f:r:i:m:t:")) != -1)
     {
         switch(opt)
         {
+            case 'f':
+                g_fp2send = fopen(optarg, "rb");
+                ASSERT(g_fp2send, "could not open file <%s>\n", optarg);
+                break;
             case 'r':
                 get_mac_addr(optarg, g_remaddr, MAC_ADDR_LEN);
                 break;
@@ -68,15 +73,15 @@ int main(int argc, char *argv[])
 {
     handle_args(argc, argv);
 
-    INFO("%s MTU=%d dest_addr=%s\n",
-        g_tx_mode?"TX":"RX", g_mtu, get_remaddr_str());
 
     if(g_tx_mode)
     {
-        sender(g_fd, g_remaddr, MAC_ADDR_LEN, g_mtu);
+        INFO("starting TX MTU=%d dest_addr=%s\n", g_mtu, get_remaddr_str());
+        sender(g_fd, g_fp2send, g_remaddr, MAC_ADDR_LEN, g_mtu);
     }
     else
     {
+        INFO("starting RX ...\n");
         receiver(g_fd);
     }
 
