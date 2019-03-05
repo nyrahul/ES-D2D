@@ -33,7 +33,6 @@ int get_mac_addr(const char *addr, uint8_t *mac, size_t len)
     strncpy(addrstr, addr, sizeof(addrstr));
     while((ptr = strtok_r(ptr, ":", &state)))
     {
-        printf("ptr=[%s]\n", ptr);
         mac[i++] = strtol(ptr, NULL, 16);
         if(i >= len) break;
         ptr = NULL;
@@ -81,11 +80,11 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
     lladdr.sll_protocol = htons(D2D_PROTO);
     memcpy(lladdr.sll_addr, mac, maclen);
 
-    for(i=0;i<1000;i++)
+    for(i=0;i<90000;i++)
     {
         len = fill_buf(buf, mtu);
         ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
-        usleep(0);
+        if(i%1000 == 0) usleep(0);
     }
     return SUCCESS;
 }
@@ -100,7 +99,7 @@ int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd)
     INFO("Statistics:\n");
     INFO("Bytes rcvd=%zu\n", bytes_rcvd);
     INFO("time in ms=%d\n", ms);
-    INFO("MBps=%.2f\n", MBps);
+    INFO("Thruput=%.2f MBps\n", MBps);
 }
 
 void set_timeout(int fd, int ms)
