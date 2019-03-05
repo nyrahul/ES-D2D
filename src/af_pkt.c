@@ -93,14 +93,14 @@ int sender(int fd, const uint8_t *mac, size_t maclen, const int mtu)
 int calc_rate(struct timeval *stv, struct timeval *etv, size_t bytes_rcvd)
 {
     int ms;
+    double MBps;
 
     ms = (((etv->tv_sec - stv->tv_sec)*1000) + ((etv->tv_usec - stv->tv_usec)/1000));
+    MBps = (double)(bytes_rcvd/(1024*1024))/(double)(ms/1000);
     INFO("Statistics:\n");
     INFO("Bytes rcvd=%zu\n", bytes_rcvd);
     INFO("time in ms=%d\n", ms);
-    INFO("stv=%ld:%ld etv=%ld:%ld\n",
-            stv->tv_sec, stv->tv_usec,
-            etv->tv_sec, etv->tv_usec);
+    INFO("MBps=%.2f\n", MBps);
 }
 
 void set_timeout(int fd, int ms)
