@@ -10,6 +10,7 @@
 int g_ifindex = -1;
 int g_l2_proto = ETH_P_ALL;// D2D_PROTO;
 extern int g_mtu;
+extern int g_snack_enabled;
 
 int get_ifindex(int fd, const char *if_name)
 {

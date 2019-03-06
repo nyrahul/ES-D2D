@@ -5,12 +5,15 @@
 int g_fd = -1;
 int g_tx_mode = 0;
 int g_mtu = 1500;
+int g_snack_enabled = 1;
 uint8_t g_remaddr[MAC_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 FILE *g_fp2send = NULL;
 
 void usage(const char *cmd)
 {
-    INFO("Usage: %s -t <TX/RX> -i <*interface> -r <remote_mac_addr> -m <mtu> -f <file>\n", cmd);
+    INFO("Usage: %s -t <TX/RX> -i <*interface> "
+        "-r <remote_mac_addr> -m <mtu> -f <file>"
+        "-s <snack enable/disable>\n", cmd);
     exit(2);
 }
 
@@ -30,10 +33,13 @@ char *get_remaddr_str(void)
 int handle_args(int argc, char *argv[])
 {
     int opt;
-    while((opt = getopt(argc, argv, "f:r:i:m:t:")) != -1)
+    while((opt = getopt(argc, argv, "s:f:r:i:m:t:")) != -1)
     {
         switch(opt)
         {
+            case 's':
+                g_snack_enabled = atoi(optarg);
+                break;
             case 'f':
                 g_fp2send = fopen(optarg, "rb");
                 ASSERT(g_fp2send, "could not open file <%s>\n", optarg);
@@ -81,7 +87,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        INFO("starting RX ...\n");
+        INFO("starting RX snack=%d...\n", g_snack_enabled);
         receiver(g_fd);
     }
 
