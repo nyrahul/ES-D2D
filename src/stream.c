@@ -70,7 +70,7 @@ int stream_send_snack(stream_info_t *si)
 int stream_handle_loss(stream_info_t *si, d2d_hdr_t *hdr)
 {
     int i;
-    int end_seq = si->last_seq + 1, start_seq = hdr->seq;
+    int start_seq = si->last_seq + 1, end_seq = hdr->seq;
 
     si->lost_cnt += (end_seq - start_seq);
     for(i = 0; i < MAX_PKT_LOST; i++)
