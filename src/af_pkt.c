@@ -94,6 +94,8 @@ void *snack_receiver(void *arg)
         {
             int seq;
             memcpy(&seq, ptr, sizeof(seq));
+            ptr += sizeof(seq);
+            n -= sizeof(seq);
             printf("snack:%d\n", seq);
         }
     }
