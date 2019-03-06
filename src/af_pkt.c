@@ -9,6 +9,7 @@
 
 int g_ifindex = -1;
 int g_l2_proto = ETH_P_ALL;// D2D_PROTO;
+extern int g_mtu;
 
 int get_ifindex(int fd, const char *if_name)
 {
@@ -66,6 +67,33 @@ int fill_buf(uint8_t *buf, int mtu)
 }
 
 FILE *g_readfp = NULL;
+pthread_mutex_t g_sender_mutex;
+
+int send_pkt_from_file(int fd, FILE *fp, int seq, struct sockaddr_ll *lladdr)
+{
+    uint8_t buf[MAX_MAC_MTU];
+    int ret, len;
+    d2d_hdr_t *hdr = (d2d_hdr_t *)buf;
+
+    ret = fseek(fp, (seq-1)*(g_mtu-sizeof(d2d_hdr_t)), SEEK_SET);
+    if(ret) return FAILURE;
+
+    hdr->seq = seq;
+    len = fread(buf+sizeof(d2d_hdr_t), 1, g_mtu-sizeof(d2d_hdr_t), fp);
+    if(len <= 0)
+    {
+        ERROR("fread failed seq=%d, len=%d\n", seq, len);
+        return FAILURE;
+    }
+    ret = sendto(fd, buf, len+sizeof(d2d_hdr_t), 0, (struct sockaddr*)lladdr, sizeof(*lladdr));
+    if(ret <= 0)
+    {
+        ERROR("sendto failed %m ret=%d, fd=%d len=%d\n", ret, fd, len);
+        return FAILURE;
+    }
+    return SUCCESS;
+}
+
 void *snack_receiver(void *arg)
 {
     struct sockaddr_ll remaddr;
@@ -74,6 +102,8 @@ void *snack_receiver(void *arg)
     uint8_t buf[MAX_MAC_MTU];
     d2d_hdr_t *hdr = (d2d_hdr_t *)buf;
     uint8_t *ptr = buf + sizeof(d2d_hdr_t);
+    long org_loc;
+    int ret;
 
     while(1)
     {
@@ -90,14 +120,20 @@ void *snack_receiver(void *arg)
         }
         ptr = buf + sizeof(d2d_hdr_t);
         n -= sizeof(d2d_hdr_t);
+        pthread_mutex_lock(&g_sender_mutex);
+        org_loc = ftell(g_readfp);
         while(n > 0)
         {
             int seq;
             memcpy(&seq, ptr, sizeof(seq));
             ptr += sizeof(seq);
             n -= sizeof(seq);
+            ret = fseek(g_readfp, seq*g_mtu, SEEK_SET);
+            if(ret) ERROR("fseek failed seq=%d, g_mtu=%d\n", seq, g_mtu);
             printf("snack:%d\n", seq);
         }
+        fseek(g_readfp, org_loc, SEEK_SET);
+        pthread_mutex_unlock(&g_sender_mutex);
     }
     return NULL;
 }
@@ -105,8 +141,8 @@ void *snack_receiver(void *arg)
 int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
 {
     struct sockaddr_ll lladdr = {0};
-    uint8_t buf[MAX_MAC_MTU] = { 1 };
-    int len, ret, i;
+    uint8_t buf[MAX_MAC_MTU];
+    int len, ret, i, seq;
 
     if(fp)
     {
@@ -126,15 +162,28 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
         int nmemb = mtu-sizeof(d2d_hdr_t);
         INFO("sending from file mtu=%d d2d_hdr_sz=%zu, nmemb=%d...\n",
                 mtu, sizeof(d2d_hdr_t), nmemb);
+        ret = SUCCESS;
+        seq = 1;
+        while(ret == SUCCESS)
+        {
+            pthread_mutex_lock(&g_sender_mutex);
+            ret = send_pkt_from_file(fd, fp, seq, &lladdr);
+            pthread_mutex_unlock(&g_sender_mutex);
+            seq++;
+        }
+        /*
         while((len = fread(buf+sizeof(d2d_hdr_t), 1, nmemb, fp))>0)
         {
             len = fill_buf(buf, len+sizeof(d2d_hdr_t));
+            pthread_mutex_lock(&g_sender_mutex);
             ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
+            pthread_mutex_unlock(&g_sender_mutex);
             if(ret <= 0)
             {
                 ERROR("sendto failed ret=%d %m\n", ret);
             }
         }
+        */
     }
     else
     {
