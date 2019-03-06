@@ -8,7 +8,6 @@
 #define D2D_PROTO   0x9898
 
 int g_ifindex = -1;
-int g_l2_proto = ETH_P_ALL;// D2D_PROTO;
 extern int g_mtu;
 extern int g_snack_enabled;
 
@@ -49,7 +48,7 @@ int create_sock(const char *if_name)
 {
     int fd;
 
-    fd = socket(AF_PACKET, SOCK_DGRAM, htons(g_l2_proto));
+    fd = socket(AF_PACKET, SOCK_DGRAM, htons(D2D_PROTO));
     ASSERT(fd >= 0, "socket failed %m");
 
     g_ifindex = get_ifindex(fd, if_name);
@@ -235,7 +234,7 @@ int receiver(int fd)
             }
             stream_handle_pkt(si, buf, n);
             gettimeofday(&end_tv, NULL);
-            if(diffms(&snack_tv, &end_tv)>=200)
+            if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=200)
             {
                 gettimeofday(&snack_tv, NULL);
                 stream_send_snack(si);

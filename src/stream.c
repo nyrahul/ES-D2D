@@ -35,11 +35,11 @@ int stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv)
 int add_to_lostlist(stream_info_t *si, int start_seq, int end_seq)
 {
     int i;
+    si->lost_cnt += (end_seq - start_seq);
     for(i = 0; i < MAX_PKT_LOST; i++)
     {
         if(!si->lost[i])
         {
-            si->lost_cnt++;
             si->lost[i] = start_seq++;
             if(start_seq == end_seq) break;
         }
