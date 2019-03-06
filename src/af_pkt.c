@@ -234,7 +234,7 @@ int receiver(int fd)
             }
             stream_handle_pkt(si, buf, n);
             gettimeofday(&end_tv, NULL);
-            if(diffms(&snack_tv, &end_tv)>=100)
+            if(diffms(&snack_tv, &end_tv)>=200)
             {
                 gettimeofday(&snack_tv, NULL);
                 stream_send_snack(si);
