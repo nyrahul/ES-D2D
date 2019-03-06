@@ -104,7 +104,9 @@ int handle_retry(stream_info_t *si, d2d_hdr_t *hdr)
     }
     if(i == MAX_PKT_LOST)
     {
-        ERROR("RETRIED pkt not found in LOST list seq=%d\n", hdr->seq);
+        // Lost packet might be retried more than once and recvd more than once
+        // ERROR("RETRIED pkt not found in LOST list seq=%d\n", hdr->seq);
+        return FAILURE;
     }
 
     return SUCCESS;
@@ -121,7 +123,11 @@ int stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n)
     hdr = (d2d_hdr_t *)buf;
     if(hdr->seq < si->last_seq)
     {
-        handle_retry(si, hdr);
+        if(handle_retry(si, hdr) == FAILURE)
+        {
+            // packet retried more than once and rcvd more than once
+            si->rx_data_bytes -= (size_t)(n - sizeof(d2d_hdr_t));
+        }
         return SUCCESS;
     }
     if(si->last_seq + 1 != hdr->seq)
