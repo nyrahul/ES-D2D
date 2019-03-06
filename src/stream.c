@@ -19,7 +19,7 @@ int stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv)
     int ms;
     double MBps;
 
-    ms = (((etv->tv_sec - stv->tv_sec)*1000) + ((etv->tv_usec - stv->tv_usec)/1000));
+    ms   = diffms(stv, etv);
     MBps = (double)(si->rx_data_bytes/(1024*1024))/(double)(ms/1000);
 
     INFO("RX Statistics:\n");
@@ -52,7 +52,7 @@ int add_to_lostlist(stream_info_t *si, int start_seq, int end_seq)
     return SUCCESS;
 }
 
-int send_snack(stream_info_t *si)
+int stream_send_snack(stream_info_t *si)
 {
     uint8_t buf[MAX_MAC_MTU];
     uint8_t *ptr = buf + sizeof(d2d_hdr_t);
@@ -92,7 +92,6 @@ int stream_handle_loss(stream_info_t *si, d2d_hdr_t *hdr)
     {
         add_to_lostlist(si, si->last_seq + 1, hdr->seq);
     }
-    send_snack(si);
     return SUCCESS;
 }
 

@@ -25,5 +25,6 @@ typedef struct _stream_
 void stream_init(stream_info_t *si, int fd);
 int  stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n);
 int  stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv);
+int  stream_send_snack(stream_info_t *si);
 
 #endif // _STREAM_H_

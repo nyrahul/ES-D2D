@@ -25,4 +25,10 @@ if(!(COND)) \
 #define MAC_ADDR_LEN    6
 #define MAX_MAC_MTU     4096
 
+static inline int diffms(struct timeval *stv, struct timeval *etv)
+{
+    return (((etv->tv_sec - stv->tv_sec)*1000) +
+            ((etv->tv_usec - stv->tv_usec)/1000));
+}
+
 #endif  // _COMMON_H_

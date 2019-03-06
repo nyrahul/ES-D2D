@@ -130,6 +130,7 @@ void *snack_receiver(void *arg)
             n -= sizeof(seq);
             send_pkt_from_file(fd, g_readfp, seq, &remaddr);
             printf("%d ", seq);
+            fflush(NULL);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
@@ -205,7 +206,7 @@ int receiver(int fd)
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
     int ret;
-    struct timeval end_tv, start_tv;
+    struct timeval end_tv, start_tv, snack_tv;
     stream_info_t strinfo, *si = &strinfo;
 
     lladdr.sll_family   = AF_PACKET;
@@ -228,10 +229,16 @@ int receiver(int fd)
             if(!si->rx_num_pkts)
             {
                 gettimeofday(&start_tv, NULL);
+                gettimeofday(&snack_tv, NULL);
                 set_timeout(fd, 200);
             }
             stream_handle_pkt(si, buf, n);
             gettimeofday(&end_tv, NULL);
+            if(diffms(&snack_tv, &end_tv)>=100)
+            {
+                gettimeofday(&snack_tv, NULL);
+                stream_send_snack(si);
+            }
         }
         set_timeout(fd, 0);
         stream_getstats(si, &start_tv, &end_tv);
