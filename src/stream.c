@@ -126,6 +126,7 @@ int stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n)
     hdr = (d2d_hdr_t *)buf;
     if(hdr->seq < si->last_seq)
     {
+        INFO("recv old seq=%d\n", hdr->seq);
         handle_retry(si, hdr);
         return SUCCESS;
     }

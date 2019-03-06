@@ -128,9 +128,8 @@ void *snack_receiver(void *arg)
             memcpy(&seq, ptr, sizeof(seq));
             ptr += sizeof(seq);
             n -= sizeof(seq);
-            ret = fseek(g_readfp, seq*g_mtu, SEEK_SET);
-            if(ret) ERROR("fseek failed seq=%d, g_mtu=%d\n", seq, g_mtu);
-            printf("snack:%d\n", seq);
+            send_pkt_from_file(fd, g_readfp, seq, &remaddr);
+            printf("%d ", seq);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
@@ -171,19 +170,6 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
             pthread_mutex_unlock(&g_sender_mutex);
             seq++;
         }
-        /*
-        while((len = fread(buf+sizeof(d2d_hdr_t), 1, nmemb, fp))>0)
-        {
-            len = fill_buf(buf, len+sizeof(d2d_hdr_t));
-            pthread_mutex_lock(&g_sender_mutex);
-            ret = sendto(fd, buf, len, 0, (struct sockaddr*)&lladdr, sizeof(lladdr));
-            pthread_mutex_unlock(&g_sender_mutex);
-            if(ret <= 0)
-            {
-                ERROR("sendto failed ret=%d %m\n", ret);
-            }
-        }
-        */
     }
     else
     {
