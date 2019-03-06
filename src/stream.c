@@ -22,7 +22,7 @@ int stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv)
     ms   = diffms(stv, etv);
     MBps = (double)(si->rx_data_bytes/(1024*1024))/(double)(ms/1000);
 
-    INFO("RX Statistics:\n");
+    INFO("\nRX Statistics:\n");
     INFO("Total_bytes rcvd=%zu\n", si->rx_tot_bytes);
     INFO("Data_bytes rcvd=%zu\n", si->rx_data_bytes);
     INFO("Lost pkts=%d\n", si->lost_cnt);
@@ -121,7 +121,6 @@ int stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n)
     hdr = (d2d_hdr_t *)buf;
     if(hdr->seq < si->last_seq)
     {
-        INFO("recv old seq=%d\n", hdr->seq);
         handle_retry(si, hdr);
         return SUCCESS;
     }
