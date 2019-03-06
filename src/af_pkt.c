@@ -171,6 +171,7 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
             pthread_mutex_unlock(&g_sender_mutex);
             seq++;
         }
+        sleep(5); // Sleep for 5 seconds for SNACK to end
     }
     else
     {
@@ -236,7 +237,7 @@ int receiver(int fd)
             {
                 gettimeofday(&start_tv, NULL);
                 gettimeofday(&snack_tv, NULL);
-                set_timeout(fd, 100);
+                set_timeout(fd, 500);
             }
             stream_handle_pkt(si, buf, n);
             gettimeofday(&end_tv, NULL);
