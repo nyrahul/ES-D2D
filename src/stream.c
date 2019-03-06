@@ -55,13 +55,13 @@ int stream_send_snack(stream_info_t *si)
         }
     }
 
-    if(len > sizeof(d2d_hdr_t))
+    if(len <= sizeof(d2d_hdr_t))
+        return FAILURE;
+    ret = sendto(si->fd, buf, len, 0,
+            (struct sockaddr*)&si->remaddr, sizeof(si->remaddr));
+    if(ret <= 0)
     {
-        ret = sendto(si->fd, buf, len, 0, (struct sockaddr*)&si->remaddr, sizeof(si->remaddr));
-        if(ret <= 0)
-        {
-            ERROR("SNACK sendto failed %m fd=%d ret=%d\n", si->fd, ret);
-        }
+        ERROR("SNACK sendto failed %m fd=%d ret=%d\n", si->fd, ret);
     }
 
     return SUCCESS;
@@ -86,7 +86,7 @@ int stream_handle_loss(stream_info_t *si, d2d_hdr_t *hdr)
         ERROR("pkts from seq=%d to %d could not be snacked\n",
                 start_seq, end_seq);
     }
-    printf("Lost pkts:%d   \r", si->lost_cnt);
+    INFO("Lost pkts:%d   \r", si->lost_cnt);
     fflush(NULL);
     return SUCCESS;
 }

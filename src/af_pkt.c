@@ -221,20 +221,26 @@ int receiver(int fd)
         stream_init(si, fd);
         while(1)
         {
-            n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&si->remaddr, &slen);
+            n = recvfrom(fd, buf, sizeof(buf), 0,
+                    (struct sockaddr*)&si->remaddr, &slen);
             if(n <= 0)
             {
+                if(g_snack_enabled)
+                {
+                    if(SUCCESS == stream_send_snack(si))
+                        continue;
+                }
                 break; //timedout
             }
             if(!si->rx_num_pkts)
             {
                 gettimeofday(&start_tv, NULL);
                 gettimeofday(&snack_tv, NULL);
-                set_timeout(fd, 200);
+                set_timeout(fd, 100);
             }
             stream_handle_pkt(si, buf, n);
             gettimeofday(&end_tv, NULL);
-            if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=200)
+            if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=500)
             {
                 gettimeofday(&snack_tv, NULL);
                 stream_send_snack(si);
