@@ -129,8 +129,8 @@ void *snack_receiver(void *arg)
             ptr += sizeof(seq);
             n -= sizeof(seq);
             send_pkt_from_file(fd, g_readfp, seq, &remaddr);
-            printf("%d ", seq);
-            fflush(NULL);
+            // printf("%d ", seq);
+            // fflush(NULL);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
