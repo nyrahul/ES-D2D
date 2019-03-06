@@ -32,25 +32,6 @@ int stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv)
     INFO("Thruput=%.2f MBps\n", MBps);
 }
 
-int add_to_lostlist(stream_info_t *si, int start_seq, int end_seq)
-{
-    int i;
-    si->lost_cnt += (end_seq - start_seq);
-    for(i = 0; i < MAX_PKT_LOST; i++)
-    {
-        if(!si->lost[i])
-        {
-            si->lost[i] = start_seq++;
-            if(start_seq == end_seq) break;
-        }
-    }
-    if(start_seq != end_seq)
-    {
-        ERROR("pkts from seq=%d to %d could not be snacked\n",
-                start_seq, end_seq);
-    }
-    return SUCCESS;
-}
 
 int stream_send_snack(stream_info_t *si)
 {
@@ -88,10 +69,25 @@ int stream_send_snack(stream_info_t *si)
 
 int stream_handle_loss(stream_info_t *si, d2d_hdr_t *hdr)
 {
-    if(hdr)
+    int i;
+    int end_seq = si->last_seq + 1, start_seq = hdr->seq;
+
+    si->lost_cnt += (end_seq - start_seq);
+    for(i = 0; i < MAX_PKT_LOST; i++)
     {
-        add_to_lostlist(si, si->last_seq + 1, hdr->seq);
+        if(!si->lost[i])
+        {
+            si->lost[i] = start_seq++;
+            if(start_seq == end_seq) break;
+        }
     }
+    if(start_seq != end_seq)
+    {
+        ERROR("pkts from seq=%d to %d could not be snacked\n",
+                start_seq, end_seq);
+    }
+    printf("Lost pkts:%d   \r", si->lost_cnt);
+    fflush(NULL);
     return SUCCESS;
 }
 
@@ -131,7 +127,6 @@ int stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n)
     }
     if(si->last_seq + 1 != hdr->seq)
     {
-        INFO("got out of seq, exp=%d got=%d\n", si->last_seq+1, hdr->seq);
         stream_handle_loss(si, hdr);
     }
     si->last_seq = hdr->seq;
