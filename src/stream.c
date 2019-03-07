@@ -105,7 +105,7 @@ int handle_retry(stream_info_t *si, d2d_hdr_t *hdr)
     if(i == MAX_PKT_LOST)
     {
         // Lost packet might be retried more than once and recvd more than once
-        // ERROR("RETRIED pkt not found in LOST list seq=%d\n", hdr->seq);
+        ERROR("RETRIED pkt not found in LOST list seq=%d\n", hdr->seq);
         return FAILURE;
     }
 
