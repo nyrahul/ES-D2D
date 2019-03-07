@@ -13,7 +13,7 @@ extern int g_snack_enabled;
 
 int get_ifindex(int fd, const char *if_name)
 {
-    int ret;
+    int ret, idx;
     struct ifreq ifr;
     size_t len = strlen(if_name);
 
@@ -23,8 +23,15 @@ int get_ifindex(int fd, const char *if_name)
 
     ret = ioctl(fd, SIOCGIFINDEX, &ifr);
     ASSERT(ret != -1, "ioctl failed");
+    idx = ifr.ifr_ifindex;
 
-    return ifr.ifr_ifindex;
+    ifr.ifr_mtu = g_mtu;
+    ret = ioctl(fd, SIOCSIFMTU, &ifr);
+    ASSERT(ret != -1, "ioctl failed");
+
+    INFO("MTU set to %d\n", ifr.ifr_mtu);
+
+    return idx;
 }
 
 int get_mac_addr(const char *addr, uint8_t *mac, size_t len)

@@ -32,6 +32,7 @@ char *get_remaddr_str(void)
 
 int handle_args(int argc, char *argv[])
 {
+    char intf[64];
     int opt;
     while((opt = getopt(argc, argv, "s:f:r:i:m:t:")) != -1)
     {
@@ -48,7 +49,7 @@ int handle_args(int argc, char *argv[])
                 get_mac_addr(optarg, g_remaddr, MAC_ADDR_LEN);
                 break;
             case 'i':
-                g_fd = create_sock(optarg);
+                strncpy(intf, optarg, sizeof(intf));
                 break;
             case 'm':
                 g_mtu = atoi(optarg);
@@ -67,11 +68,12 @@ int handle_args(int argc, char *argv[])
                 usage(argv[0]);
         }
     }
-    if(g_fd == -1)
+    if(!intf[0])
     {
         printf("Interface info needed\n");
         usage(argv[0]);
     }
+    g_fd = create_sock(intf);
     return SUCCESS;
 }
 
