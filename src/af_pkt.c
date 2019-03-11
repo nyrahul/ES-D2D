@@ -205,7 +205,7 @@ void *snack_receiver(void *arg)
             ptr += sizeof(seq);
             n -= sizeof(seq);
             send_pkt_from_file(fd, g_readfp, seq, &remaddr);
-            printf("snack retried=%d    \n", seq);
+            // printf("snack retried=%d    \n", seq);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
