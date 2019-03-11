@@ -11,7 +11,7 @@ FILE *g_fp2send = NULL;
 
 void usage(const char *cmd)
 {
-    INFO("Usage: %s -t <TX/RX> -i <*interface> "
+    INFO("Usage: %s -t <TX/RX> -i <*interface|ip:port|port> "
         "-r <remote_mac_addr> -m <mtu> -f <file>"
         "-s <snack enable/disable>\n", cmd);
     exit(2);

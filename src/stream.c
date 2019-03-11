@@ -116,10 +116,6 @@ int stream_handle_pkt(stream_info_t *si, const uint8_t *buf, int n)
 {
     d2d_hdr_t *hdr = NULL;
 
-    si->rx_tot_bytes  += (size_t)n;
-    si->rx_data_bytes += (size_t)(n - sizeof(d2d_hdr_t));
-    si->rx_num_pkts++;
-
     hdr = (d2d_hdr_t *)buf;
     if(hdr->seq < si->last_seq)
     {

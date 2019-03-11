@@ -10,7 +10,7 @@
 
 int get_ifindex(int fd, const char *if_name);
 int get_mac_addr(const char *addr, uint8_t *mac, size_t len);
-int create_sock(const char *if_name);
+int create_sock(char *if_name);
 int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu);
 int receiver(int fd);
 

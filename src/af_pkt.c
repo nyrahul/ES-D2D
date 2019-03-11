@@ -1,6 +1,11 @@
 #include <unistd.h>
 #include <pthread.h>
+#include <ctype.h>
 #include <sys/time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "common.h"
 #include "af_pkt.h"
 #include "stream.h"
@@ -10,6 +15,7 @@
 int g_ifindex = -1;
 extern int g_mtu;
 extern int g_snack_enabled;
+extern int g_tx_mode;
 
 int get_ifindex(int fd, const char *if_name)
 {
@@ -51,14 +57,76 @@ int get_mac_addr(const char *addr, uint8_t *mac, size_t len)
     return SUCCESS;
 }
 
-int create_sock(const char *if_name)
+int create_tcp_sock(char *addr)
+{
+    int fd, port = 0, ret = 0;
+    char *ptr = NULL;
+    struct sockaddr_in sa;
+
+    memset(&sa, 0, sizeof(sa));
+    sa.sin_family = AF_INET;
+    sa.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    ptr = strchr(addr, ':');
+    if(ptr) //IP:Port
+    {
+        *ptr++=0;
+        ret = inet_aton(addr, &sa.sin_addr);
+        ASSERT(ret != 0, "inet_aton failed %s\n", addr);
+    }
+    else
+    {
+        ptr = addr;
+    }
+    sa.sin_port = htons(atoi(ptr));
+    ASSERT(sa.sin_port != 0, "invalid port %s\n", ptr);
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT(fd >= 0, "socket failed %m\n");
+
+    if(g_tx_mode)
+    {
+        ret = connect(fd, (struct sockaddr *)&sa, sizeof(sa));
+        ASSERT(ret == 0, "connect failed %m\n");
+    }
+    else
+    {
+        ret = bind(fd, (struct sockaddr *)&sa, sizeof(sa));
+        ASSERT(ret == 0, "bind failed %m\n");
+
+        ret = listen(fd, 5);
+        ASSERT(ret == 0, "listen failed %m\n");
+    }
+    g_snack_enabled = 0;
+
+    return fd;
+}
+
+int create_sock(char *if_name)
 {
     int fd;
 
-    fd = socket(AF_PACKET, SOCK_DGRAM, htons(D2D_PROTO));
-    ASSERT(fd >= 0, "socket failed %m");
+    if(isdigit(if_name[0])) // IP:Port or Port only
+    {
+        fd = create_tcp_sock(if_name);
+    }
+    else // Interface name
+    {
+        struct sockaddr_ll lladdr;
+        int ret;
 
-    g_ifindex = get_ifindex(fd, if_name);
+        fd = socket(AF_PACKET, SOCK_DGRAM, htons(D2D_PROTO));
+        g_ifindex = get_ifindex(fd, if_name);
+        ASSERT((fd >= 0) && (g_ifindex != -1), "socket/get_ifindex fd=%d failed %m", fd);
+
+        lladdr.sll_family   = AF_PACKET;
+        lladdr.sll_ifindex  = g_ifindex;
+        lladdr.sll_protocol = htons(D2D_PROTO);
+
+        ret = bind(fd, (struct sockaddr*)&lladdr, sizeof(lladdr));
+        ASSERT(ret != -1, "bind failed %m");
+
+    }
 
     return fd;
 }
@@ -145,17 +213,44 @@ void *snack_receiver(void *arg)
     return NULL;
 }
 
+int tcp_sender(int fd, FILE *fp, const int mtu)
+{
+    uint8_t buf[MAX_MAC_MTU];
+    int ret, len;
+
+    while(1)
+    {
+        len = fread(buf, 1, mtu, fp);
+        if(len <= 0)
+        {
+            INFO("done sending\n");
+            break;
+        }
+        ret = send(fd, buf, len, 0);
+        if(ret <= 0)
+        {
+            ERROR("send failed %m ret=%d, fd=%d len=%d\n", ret, fd, len);
+            return FAILURE;
+        }
+    }
+    return SUCCESS;
+}
+
 int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
 {
     struct sockaddr_ll lladdr = {0};
     uint8_t buf[MAX_MAC_MTU];
     int len, ret, i, seq;
 
-    if(fp)
+    if(fp && g_snack_enabled)
     {
         pthread_t tid;
         g_readfp = fp;
         ret = pthread_create(&tid, NULL, snack_receiver, (void*)(uintptr_t)fd);
+    }
+    else if(g_ifindex == -1)
+    {
+        return tcp_sender(fd, fp, mtu);
     }
 
     lladdr.sll_family = AF_PACKET;
@@ -207,30 +302,39 @@ void set_timeout(int fd, int ms)
     ASSERT(ret != -1, "setsockopt failed %m");
 }
 
+#define CLOSE(FD)   if((FD) >= 0) { close(FD); (FD)=-1; }
+
 int receiver(int fd)
 {
-    struct sockaddr_ll lladdr;
-    socklen_t slen = sizeof(lladdr);
+    int server_fd = -1;
+    socklen_t slen = sizeof(struct sockaddr_ll);
     uint8_t buf[MAX_MAC_MTU];
     ssize_t n;
-    int ret;
     struct timeval end_tv, start_tv, snack_tv;
     stream_info_t strinfo, *si = &strinfo;
 
-    lladdr.sll_family   = AF_PACKET;
-    lladdr.sll_ifindex  = g_ifindex;
-    lladdr.sll_protocol = htons(D2D_PROTO);
-
-    ret = bind(fd, (struct sockaddr*)&lladdr, sizeof(lladdr));
-    ASSERT(ret != -1, "bind failed %m");
-
+    server_fd = fd;
     while(1)
     {
+        if(g_ifindex == -1)
+        {
+            struct sockaddr_in cli;
+            socklen_t clen = sizeof(cli);
+            fd = accept(server_fd, (struct sockaddr *)&cli, &clen);
+            INFO("TCP conn accepted new FD=%d\n", fd);
+        }
         stream_init(si, fd);
         while(1)
         {
-            n = recvfrom(fd, buf, sizeof(buf), 0,
-                    (struct sockaddr*)&si->remaddr, &slen);
+            if(g_ifindex == -1)
+            {
+                n = recv(fd, buf, sizeof(buf), 0);
+            }
+            else
+            {
+                n = recvfrom(fd, buf, sizeof(buf), 0,
+                        (struct sockaddr*)&si->remaddr, &slen);
+            }
             if(n <= 0)
             {
                 if(g_snack_enabled)
@@ -246,7 +350,14 @@ int receiver(int fd)
                 gettimeofday(&snack_tv, NULL);
                 set_timeout(fd, 500);
             }
-            stream_handle_pkt(si, buf, n);
+            si->rx_tot_bytes  += (size_t)n;
+            si->rx_data_bytes += (size_t)(n - g_snack_enabled?sizeof(d2d_hdr_t):0);
+            si->rx_num_pkts++;
+
+            if(g_ifindex >= 0)
+            {
+                stream_handle_pkt(si, buf, n);
+            }
             gettimeofday(&end_tv, NULL);
             if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=500)
             {
@@ -256,6 +367,10 @@ int receiver(int fd)
         }
         set_timeout(fd, 0);
         stream_getstats(si, &start_tv, &end_tv);
+        if(g_ifindex == -1)
+        {
+            CLOSE(fd);
+        }
     }
     return SUCCESS;
 }
