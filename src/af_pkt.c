@@ -350,7 +350,7 @@ int receiver(int fd)
             {
                 gettimeofday(&start_tv, NULL);
                 gettimeofday(&snack_tv, NULL);
-                set_timeout(fd, 500);
+                set_timeout(fd, 1000);
             }
 
             if(g_ifindex >= 0)
