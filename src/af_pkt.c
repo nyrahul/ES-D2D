@@ -274,7 +274,7 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
             pthread_mutex_unlock(&g_sender_mutex);
             seq++;
         }
-        sleep(5); // Sleep for 5 seconds for SNACK to end
+        sleep(10); // Sleep for 5 seconds for SNACK to end
     }
     else
     {
@@ -351,16 +351,15 @@ int receiver(int fd)
                 gettimeofday(&snack_tv, NULL);
                 set_timeout(fd, 500);
             }
-            si->rx_tot_bytes  += (size_t)n;
-            si->rx_num_pkts++;
 
             if(g_ifindex >= 0)
             {
-                si->rx_data_bytes += (size_t)(n - g_snack_enabled?sizeof(d2d_hdr_t):0);
                 stream_handle_pkt(si, buf, n);
             }
             else
             {
+                si->rx_tot_bytes  += (size_t)n;
+                si->rx_num_pkts++;
                 si->rx_data_bytes += (size_t)n;
             }
             gettimeofday(&end_tv, NULL);
