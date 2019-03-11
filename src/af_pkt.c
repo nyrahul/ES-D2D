@@ -180,6 +180,7 @@ void *snack_receiver(void *arg)
     long org_loc;
     int ret;
 
+    INFO("started SNACK thread...\n");
     while(1)
     {
         n = recvfrom(fd, buf, sizeof(buf), 0, (struct sockaddr*)&remaddr, &slen);
