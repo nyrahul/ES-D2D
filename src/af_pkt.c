@@ -233,6 +233,7 @@ int tcp_sender(int fd, FILE *fp, const int mtu)
             return FAILURE;
         }
     }
+    close(fd);
     return SUCCESS;
 }
 
