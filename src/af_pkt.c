@@ -204,8 +204,8 @@ void *snack_receiver(void *arg)
             ptr += sizeof(seq);
             n -= sizeof(seq);
             send_pkt_from_file(fd, g_readfp, seq, &remaddr);
-            // printf("%d ", seq);
-            // fflush(NULL);
+            printf("retried=%d    \r", seq);
+            fflush(NULL);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
@@ -249,7 +249,7 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
         g_readfp = fp;
         ret = pthread_create(&tid, NULL, snack_receiver, (void*)(uintptr_t)fd);
     }
-    else if(g_ifindex == -1)
+    if(g_ifindex == -1)
     {
         return tcp_sender(fd, fp, mtu);
     }
