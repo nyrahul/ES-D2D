@@ -205,8 +205,7 @@ void *snack_receiver(void *arg)
             ptr += sizeof(seq);
             n -= sizeof(seq);
             send_pkt_from_file(fd, g_readfp, seq, &remaddr);
-            printf("retried=%d    \r", seq);
-            fflush(NULL);
+            printf("snack retried=%d    \n", seq);
         }
         fseek(g_readfp, org_loc, SEEK_SET);
         pthread_mutex_unlock(&g_sender_mutex);
@@ -360,9 +359,9 @@ int receiver(int fd)
             }
             else
             {
+                si->rx_data_bytes += (size_t)n;
                 si->rx_tot_bytes  += (size_t)n;
                 si->rx_num_pkts++;
-                si->rx_data_bytes += (size_t)n;
             }
             gettimeofday(&end_tv, NULL);
             if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=500)
