@@ -351,12 +351,16 @@ int receiver(int fd)
                 set_timeout(fd, 500);
             }
             si->rx_tot_bytes  += (size_t)n;
-            si->rx_data_bytes += (size_t)(n - g_snack_enabled?sizeof(d2d_hdr_t):0);
             si->rx_num_pkts++;
 
             if(g_ifindex >= 0)
             {
+                si->rx_data_bytes += (size_t)(n - g_snack_enabled?sizeof(d2d_hdr_t):0);
                 stream_handle_pkt(si, buf, n);
+            }
+            else
+            {
+                si->rx_data_bytes += (size_t)n;
             }
             gettimeofday(&end_tv, NULL);
             if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=500)
