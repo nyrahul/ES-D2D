@@ -63,7 +63,10 @@ int stream_send_snack(stream_info_t *si)
     {
         ERROR("SNACK sendto failed %m fd=%d ret=%d\n", si->fd, ret);
     }
-    INFO("sent SNACK with len=%d\n", len);
+    else
+    {
+        si->tx_snack++;
+    }
 
     return SUCCESS;
 }
@@ -87,8 +90,6 @@ int stream_handle_loss(stream_info_t *si, d2d_hdr_t *hdr)
         ERROR("pkts from seq=%d to %d could not be snacked\n",
                 start_seq, end_seq);
     }
-    INFO("Lost pkts:%d   \r", si->lost_cnt);
-    fflush(NULL);
     return SUCCESS;
 }
 
