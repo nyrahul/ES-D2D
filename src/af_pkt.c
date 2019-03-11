@@ -151,7 +151,11 @@ int send_pkt_from_file(int fd, FILE *fp, int seq, struct sockaddr_ll *lladdr)
     d2d_hdr_t *hdr = (d2d_hdr_t *)buf;
 
     ret = fseek(fp, (seq-1)*(g_mtu-sizeof(d2d_hdr_t)), SEEK_SET);
-    if(ret) return FAILURE;
+    if(ret)
+    {
+        ERROR("fseek failed\n");
+        return FAILURE;
+    }
 
     hdr->seq = seq;
     len = fread(buf+sizeof(d2d_hdr_t), 1, g_mtu-sizeof(d2d_hdr_t), fp);
@@ -364,10 +368,15 @@ int receiver(int fd)
                 si->rx_num_pkts++;
             }
             gettimeofday(&end_tv, NULL);
-            if(g_snack_enabled && diffms(&snack_tv, &end_tv)>=500)
+            if(diffms(&snack_tv, &end_tv)>=1500)
             {
                 gettimeofday(&snack_tv, NULL);
-                stream_send_snack(si);
+                if(g_snack_enabled)
+                {
+                    stream_send_snack(si);
+                }
+                INFO("Tot pkts:%d, Tx-snack:%d, lost-pkts:%d   \r", si->rx_num_pkts, si->tx_snack, si->lost_cnt);
+                fflush(NULL);
             }
         }
         set_timeout(fd, 0);

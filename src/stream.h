@@ -20,6 +20,7 @@ typedef struct _stream_
     int     rx_num_pkts;
     int     lost[MAX_PKT_LOST];
     int     lost_cnt;
+    int     tx_snack;
 }stream_info_t;
 
 void stream_init(stream_info_t *si, int fd);
