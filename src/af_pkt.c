@@ -243,7 +243,7 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
     uint8_t buf[MAX_MAC_MTU];
     int len, ret, i, seq;
 
-    if(fp && g_snack_enabled)
+    if(fp)
     {
         pthread_t tid;
         g_readfp = fp;
@@ -297,6 +297,7 @@ void set_timeout(int fd, int ms)
     int ret;
     struct timeval tv;
 
+    printf("setting fd timeout=%dms..\n", ms);
     tv.tv_sec = ms/1000;
     tv.tv_usec = (ms%1000)*1000;
     ret = setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));

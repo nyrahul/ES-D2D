@@ -63,6 +63,7 @@ int stream_send_snack(stream_info_t *si)
     {
         ERROR("SNACK sendto failed %m fd=%d ret=%d\n", si->fd, ret);
     }
+    INFO("sent SNACK with len=%d\n", len);
 
     return SUCCESS;
 }
