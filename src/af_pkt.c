@@ -276,6 +276,8 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
             pthread_mutex_lock(&g_sender_mutex);
             ret = send_pkt_from_file(fd, fp, seq, &lladdr);
             pthread_mutex_unlock(&g_sender_mutex);
+            printf("sent %d\r", seq);
+            fflush(NULL);
             seq++;
         }
         sleep(10); // Sleep for 5 seconds for SNACK to end
