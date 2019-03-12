@@ -379,6 +379,7 @@ int receiver(int fd)
                 fflush(NULL);
             }
         }
+        INFO("\n");
         set_timeout(fd, 0);
         stream_getstats(si, &start_tv, &end_tv);
         if(g_ifindex == -1)

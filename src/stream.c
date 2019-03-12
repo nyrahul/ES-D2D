@@ -26,6 +26,7 @@ int stream_getstats(stream_info_t *si, struct timeval *stv, struct timeval *etv)
     INFO("Total_bytes rcvd=%zu\n", si->rx_tot_bytes);
     INFO("Data_bytes rcvd=%zu\n", si->rx_data_bytes);
     INFO("Lost pkts=%d\n", si->lost_cnt);
+    INFO("SNACKs=%d\n", si->tx_snack);
     INFO("pkts rcvd=%d\n", si->rx_num_pkts);
     INFO("Avg pkt sz=%.2f\n", (float)(si->rx_tot_bytes/si->rx_num_pkts));
     INFO("time in ms=%d\n", ms);
