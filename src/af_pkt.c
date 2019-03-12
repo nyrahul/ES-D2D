@@ -234,14 +234,14 @@ int tcp_send_n(int fd, const uint8_t *buf, int n)
     return n;
 }
 
-int tcp_sender(int fd, FILE *fp, const int mtu)
+int tcp_sender(int fd, FILE *fp)
 {
     uint8_t buf[MAX_MAC_MTU];
     int ret, len, tot_len = 0;
 
     while(1)
     {
-        len = fread(buf, 1, mtu, fp);
+        len = fread(buf, 1, sizeof(buf), fp);
         if(len <= 0)
         {
             INFO("done sending\n");
@@ -269,7 +269,7 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
 
     if(g_ifindex == -1)
     {
-        return tcp_sender(fd, fp, mtu);
+        return tcp_sender(fd, fp);
     }
     if(fp)
     {
