@@ -217,6 +217,23 @@ void *snack_receiver(void *arg)
     return NULL;
 }
 
+int tcp_send_n(int fd, const uint8_t *buf, int n)
+{
+    int len = 0, ret;
+
+    while(len < n)
+    {
+        ret = send(fd, buf+len, n-len, 0);
+        if(ret <= 0)
+        {
+            ERROR("send failed %m ret=%d, fd=%d len=%d\n", ret, fd, n);
+            return FAILURE;
+        }
+        len += ret;
+    }
+    return n;
+}
+
 int tcp_sender(int fd, FILE *fp, const int mtu)
 {
     uint8_t buf[MAX_MAC_MTU];
@@ -230,20 +247,16 @@ int tcp_sender(int fd, FILE *fp, const int mtu)
             INFO("done sending\n");
             break;
         }
-        ret = send(fd, buf, len, 0);
+        ret = tcp_send_n(fd, buf, len);
         if(ret <= 0)
         {
-            ERROR("send failed %m ret=%d, fd=%d len=%d\n", ret, fd, len);
-            return FAILURE;
-        }
-        if(ret < len)
-        {
-            ERROR("Sent only %d/%d bytes\n", ret, len);
+            ERROR("TCP send failed\n");
+            break;
         }
         tot_len += ret;
         INFO("sent %u bytes   \r", tot_len);
+        fflush(NULL);
     }
-    INFO("\n");
     close(fd);
     return SUCCESS;
 }
