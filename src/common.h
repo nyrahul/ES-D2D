@@ -23,7 +23,7 @@ if(!(COND)) \
 #define FAILURE  -1
 
 #define MAC_ADDR_LEN    6
-#define MAX_MAC_MTU     16384
+#define MAX_MAC_MTU     32768
 
 static inline int diffms(struct timeval *stv, struct timeval *etv)
 {
