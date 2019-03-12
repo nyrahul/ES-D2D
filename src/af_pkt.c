@@ -220,7 +220,7 @@ void *snack_receiver(void *arg)
 int tcp_sender(int fd, FILE *fp, const int mtu)
 {
     uint8_t buf[MAX_MAC_MTU];
-    int ret, len;
+    int ret, len, tot_len = 0;
 
     while(1)
     {
@@ -236,7 +236,14 @@ int tcp_sender(int fd, FILE *fp, const int mtu)
             ERROR("send failed %m ret=%d, fd=%d len=%d\n", ret, fd, len);
             return FAILURE;
         }
+        if(ret < len)
+        {
+            ERROR("Sent only %d/%d bytes\n", ret, len);
+        }
+        tot_len += ret;
+        INFO("sent %u bytes   \r", tot_len);
     }
+    INFO("\n");
     close(fd);
     return SUCCESS;
 }
@@ -247,15 +254,15 @@ int sender(int fd, FILE *fp, const uint8_t *mac, size_t maclen, const int mtu)
     uint8_t buf[MAX_MAC_MTU];
     int len, ret, i, seq;
 
+    if(g_ifindex == -1)
+    {
+        return tcp_sender(fd, fp, mtu);
+    }
     if(fp)
     {
         pthread_t tid;
         g_readfp = fp;
         ret = pthread_create(&tid, NULL, snack_receiver, (void*)(uintptr_t)fd);
-    }
-    if(g_ifindex == -1)
-    {
-        return tcp_sender(fd, fp, mtu);
     }
 
     lladdr.sll_family = AF_PACKET;
